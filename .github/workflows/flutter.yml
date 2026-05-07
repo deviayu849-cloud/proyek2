@@ -4,10 +4,10 @@ on:
   push:
     branches: [ main ]
     tags:
-      - 'v*' # Memicu workflow saat Anda push tag seperti v1.0, v1.1, dll.
+      - 'v*'
 
 permissions:
-  contents: write # Wajib ada agar GitHub bisa membuat halaman Release
+  contents: write
 
 jobs:
   build:
@@ -20,14 +20,14 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0' # Sesuaikan dengan gambar praktikum terbaru Anda
+          flutter-version: '3.19.0' # Gunakan versi stabil ini sesuai gambar awal praktikum
 
       - name: 📦 Install Dependencies
         run: flutter pub get
 
       - name: 🧪 Run Tests
         run: flutter test
-        continue-on-error: true # Agar tetap lanjut build meski ada test yang gagal
+        continue-on-error: true
 
       - name: 🏗️ Build APK
         run: flutter build apk --release
