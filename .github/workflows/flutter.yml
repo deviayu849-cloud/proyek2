@@ -20,7 +20,8 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0' # Gunakan versi stabil ini sesuai gambar awal praktikum
+          channel: 'stable' # Ini akan mengambil versi stabil paling baru
+          cache: false      # Matikan cache sementara agar tidak memakai versi lama
 
       - name: 📦 Install Dependencies
         run: flutter pub get
