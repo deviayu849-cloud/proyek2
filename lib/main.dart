@@ -1,36 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
 
-import 'login_screen.dart';
-import 'customer_dashboard.dart';
-import 'technician_dashboard.dart';
+import 'models/user.dart';
+import 'screens/admin_dashboard.dart';
+import 'screens/customer_dashboard.dart';
+import 'screens/login_screen.dart';
+import 'screens/technician_dashboard.dart';
+import 'services/api_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-  Future<Widget> checkLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? role = prefs.getString('role');
-    String? name = prefs.getString('name');
+  Future<Widget> _initialScreen() async {
+    final token = await ApiService.getToken();
+    if (token == null || token.isEmpty) return const LoginScreen();
 
-    print("ROLE SAAT APP DIBUKA: $role");
-    print("NAME SAAT APP DIBUKA: $name");
-
-    // AUTO ROUTING BERDASARKAN ROLE
-    if (role == "customer") {
-      return CustomerDashboard(name: name ?? "");
-    } 
-    else if (role == "technician") {
-      return TechnicianDashboard(name: name ?? "");
-    } 
-    else {
-      return LoginScreen(); 
+    try {
+      final User user = await ApiService.getProfile();
+      return _dashboardFor(user);
+    } catch (_) {
+      await ApiService.clearSession();
+      return const LoginScreen();
     }
   }
 
@@ -38,25 +32,32 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: FutureBuilder(
-        future: checkLogin(),
+      title: 'JASAKU',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
+        useMaterial3: true,
+      ),
+      home: FutureBuilder<Widget>(
+        future: _initialScreen(),
         builder: (context, snapshot) {
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+                body: Center(child: CircularProgressIndicator()));
           }
 
-          if (snapshot.hasError) {
-            return Scaffold(
-              body: Center(child: Text("Terjadi error")),
-            );
-          }
-
-          return snapshot.data ?? LoginScreen();
+          return snapshot.data ?? const LoginScreen();
         },
       ),
     );
+  }
+
+  Widget _dashboardFor(User user) {
+    if (user.isAdmin) {
+      return AdminDashboard(initialUser: user);
+    }
+    if (user.isTechnician) {
+      return TechnicianDashboard(initialUser: user);
+    }
+    return CustomerDashboard(initialUser: user);
   }
 }

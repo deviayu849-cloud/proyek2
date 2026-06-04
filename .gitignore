@@ -1,45 +1,89 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# OS / editor noise
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+.history/
+.ionide/
 
-# IntelliJ related
+# Logs and local crash dumps
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code local settings. Keep shared recommendations if they are added later.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Dart / Flutter / Pub
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
+build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Symbolication related
+# Generated Flutter platform artifacts
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Flutter/.symlinks/
+ios/Pods/
+macos/Flutter/ephemeral/
+macos/Pods/
+
+# Android / Gradle generated files
+.gradle/
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/**/local.properties
+android/**/captures/
+
+# Signing keys and local secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+*.mobileprovision
+android/key.properties
+android/app/key.properties
+.env
+.env.*
+!.env.example
+
+# Firebase / Google service files for local builds
+firebase.json
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+
+# Test and build reports
+coverage/
+test-results/
+
+# Symbolication / obfuscation output
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Swift package / migration leftovers
+.build/
+.buildlog/
+.swiftpm/
+migrate_working_dir/

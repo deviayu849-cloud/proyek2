@@ -1,42 +1,46 @@
 import 'package:flutter/material.dart';
-import 'api_service.dart';
+
+import 'models/user.dart';
+import 'services/api_service.dart';
 
 class UserPage extends StatefulWidget {
+  const UserPage({super.key});
+
   @override
-  _UserPageState createState() => _UserPageState();
+  State<UserPage> createState() => _UserPageState();
 }
 
 class _UserPageState extends State<UserPage> {
-  late Future data;
-
-  @override
-  void initState() {
-    super.initState();
-    data = getUsers();
-  }
+  late final Future<User> _profile = ApiService.getProfile();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Data Users")),
-      body: FutureBuilder(
-        future: data,
+      appBar: AppBar(title: const Text('Profil')),
+      body: FutureBuilder<User>(
+        future: _profile,
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            var users = snapshot.data as List;
-
-            return ListView.builder(
-              itemCount: users.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(users[index]['name']),
-                  subtitle: Text(users[index]['email']),
-                );
-              },
-            );
-          } else {
-            return Center(child: CircularProgressIndicator());
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
           }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final user = snapshot.data;
+          if (user == null) {
+            return const Center(child: Text('Profil tidak ditemukan.'));
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              ListTile(title: const Text('Nama'), subtitle: Text(user.name)),
+              ListTile(title: const Text('Email'), subtitle: Text(user.email)),
+              ListTile(title: const Text('Role'), subtitle: Text(user.role)),
+            ],
+          );
         },
       ),
     );
