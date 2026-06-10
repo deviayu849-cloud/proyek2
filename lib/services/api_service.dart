@@ -74,11 +74,15 @@ class ApiService {
     if (decoded is Map<String, dynamic>) return decoded;
 
     throw ApiException(
-        'Format response server tidak dikenali.', response.statusCode);
+      'Format response server tidak dikenali.',
+      response.statusCode,
+    );
   }
 
   static void _throwIfNeeded(
-      http.Response response, Map<String, dynamic> data) {
+    http.Response response,
+    Map<String, dynamic> data,
+  ) {
     if (response.statusCode >= 200 && response.statusCode < 300) return;
 
     final message = data['message']?.toString();
@@ -91,8 +95,10 @@ class ApiService {
       }
     }
 
-    throw ApiException(message ?? 'Request gagal (${response.statusCode}).',
-        response.statusCode);
+    throw ApiException(
+      message ?? 'Request gagal (${response.statusCode}).',
+      response.statusCode,
+    );
   }
 
   static AuthResult _authResult(http.Response response) {
@@ -176,7 +182,10 @@ class ApiService {
   }
 
   static Future<AuthResult> googleLoginMobile(
-      String email, String name, String idToken) async {
+    String email,
+    String name,
+    String idToken,
+  ) async {
     final response = await http.post(
       _uri('/google-login-mobile'),
       headers: await _headers(),
@@ -193,8 +202,10 @@ class ApiService {
   }
 
   static Future<User> getProfile() async {
-    final response =
-        await http.get(_uri('/profile'), headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/profile'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return User.fromJson(data['user'] as Map<String, dynamic>);
@@ -232,7 +243,9 @@ class ApiService {
   }
 
   static Future<void> updatePassword(
-      String currentPassword, String newPassword) async {
+    String currentPassword,
+    String newPassword,
+  ) async {
     final response = await http.post(
       _uri('/change-password'),
       headers: await _headers(auth: true),
@@ -256,8 +269,10 @@ class ApiService {
   }
 
   static Future<List<ServiceItem>> getServices() async {
-    final response =
-        await http.get(_uri('/services'), headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/services'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return ((data['services'] as List?) ?? [])
@@ -266,8 +281,10 @@ class ApiService {
   }
 
   static Future<List<Technician>> getTechnicians() async {
-    final response = await http.get(_uri('/technicians'),
-        headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/technicians'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return ((data['technicians'] as List?) ?? [])
@@ -276,8 +293,10 @@ class ApiService {
   }
 
   static Future<List<Booking>> getBookings() async {
-    final response =
-        await http.get(_uri('/bookings'), headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/bookings'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return ((data['bookings'] as List?) ?? [])
@@ -289,6 +308,7 @@ class ApiService {
     required int serviceId,
     int? technicianId,
     required DateTime scheduledDate,
+    required String serviceLocation,
     String? notes,
   }) async {
     final response = await http.post(
@@ -298,6 +318,7 @@ class ApiService {
         'service_id': serviceId,
         if (technicianId != null) 'technician_id': technicianId,
         'scheduled_date': scheduledDate.toIso8601String(),
+        'service_location': serviceLocation.trim(),
         'notes': notes,
       }),
     );
@@ -307,8 +328,11 @@ class ApiService {
     return Booking.fromJson(data['booking'] as Map<String, dynamic>);
   }
 
-  static Future<Booking> updateBookingStatus(int bookingId, String status,
-      {String? notes}) async {
+  static Future<Booking> updateBookingStatus(
+    int bookingId,
+    String status, {
+    String? notes,
+  }) async {
     final response = await http.put(
       _uri('/bookings/$bookingId/status'),
       headers: await _headers(auth: true),
@@ -321,8 +345,10 @@ class ApiService {
   }
 
   static Future<List<Invoice>> getInvoices() async {
-    final response =
-        await http.get(_uri('/invoices'), headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/invoices'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return ((data['invoices'] as List?) ?? [])
@@ -331,8 +357,10 @@ class ApiService {
   }
 
   static Future<List<Payment>> getInvoicePayments(int invoiceId) async {
-    final response = await http.get(_uri('/invoices/$invoiceId/payments'),
-        headers: await _headers(auth: true));
+    final response = await http.get(
+      _uri('/invoices/$invoiceId/payments'),
+      headers: await _headers(auth: true),
+    );
     final data = _decode(response);
     _throwIfNeeded(response, data);
     return ((data['payments'] as List?) ?? [])
@@ -345,18 +373,61 @@ class ApiService {
     required double amount,
     required String paymentMethod,
     String? referenceNumber,
+    String? paymentProofPath,
     String? notes,
   }) async {
-    final response = await http.post(
+    final headers = await _headers(auth: true);
+    headers.remove('Content-Type');
+
+    final request = http.MultipartRequest(
+      'POST',
       _uri('/invoices/$invoiceId/payments'),
+    );
+    request.headers.addAll(headers);
+    request.fields['amount'] = amount.toString();
+    request.fields['payment_method'] = paymentMethod;
+    if (referenceNumber != null && referenceNumber.trim().isNotEmpty) {
+      request.fields['reference_number'] = referenceNumber.trim();
+    }
+    if (notes != null && notes.trim().isNotEmpty) {
+      request.fields['notes'] = notes.trim();
+    }
+    if (paymentProofPath != null && paymentProofPath.isNotEmpty) {
+      request.files.add(
+        await http.MultipartFile.fromPath('payment_proof', paymentProofPath),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    final data = _decode(response);
+    _throwIfNeeded(response, data);
+    return Payment.fromJson(data['payment'] as Map<String, dynamic>);
+  }
+
+  static Future<Payment> approvePayment(int paymentId, {String? notes}) async {
+    final response = await http.post(
+      _uri('/payments/$paymentId/approve'),
       headers: await _headers(auth: true),
       body: jsonEncode({
-        'amount': amount,
-        'payment_method': paymentMethod,
-        if (referenceNumber != null && referenceNumber.trim().isNotEmpty)
-          'reference_number': referenceNumber.trim(),
         if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       }),
+    );
+
+    final data = _decode(response);
+    _throwIfNeeded(response, data);
+    return Payment.fromJson(data['payment'] as Map<String, dynamic>);
+  }
+
+  static Future<Payment> rejectPayment(
+    int paymentId, {
+    required String reason,
+  }) async {
+    final response = await http.post(
+      _uri('/payments/$paymentId/reject'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'reason': reason.trim()}),
     );
 
     final data = _decode(response);
@@ -367,15 +438,12 @@ class ApiService {
   static Future<Booking> submitRating({
     required int bookingId,
     required int rating,
-    String? review,
+    required String review,
   }) async {
     final response = await http.post(
       _uri('/bookings/$bookingId/rating'),
       headers: await _headers(auth: true),
-      body: jsonEncode({
-        'rating': rating,
-        if (review != null && review.trim().isNotEmpty) 'review': review.trim(),
-      }),
+      body: jsonEncode({'rating': rating, 'review': review.trim()}),
     );
 
     final data = _decode(response);

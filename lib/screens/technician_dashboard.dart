@@ -52,13 +52,17 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
   Future<void> _logout() async {
     await ApiService.logout();
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red));
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -67,14 +71,14 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
       _homePage(),
       _activeBookingsPage(),
       _historyPage(),
-      _profilePage()
+      _profilePage(),
     ];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('JASAKU Teknisi'),
         actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout))
+          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],
       ),
       body: _isLoading
@@ -110,11 +114,14 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Halo, ${_user.name}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    'Halo, ${_user.name}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     _user.specialization.isEmpty
@@ -129,16 +136,26 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _statCard('Aktif', active.toString(), Icons.pending_actions,
-                  Colors.orange),
+              _statCard(
+                'Aktif',
+                active.toString(),
+                Icons.pending_actions,
+                Colors.orange,
+              ),
               const SizedBox(width: 12),
-              _statCard('Selesai', completed.toString(), Icons.check_circle,
-                  Colors.green),
+              _statCard(
+                'Selesai',
+                completed.toString(),
+                Icons.check_circle,
+                Colors.green,
+              ),
             ],
           ),
           const SizedBox(height: 24),
-          const Text('Tugas terbaru',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Tugas terbaru',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           if (_bookings.where((booking) => booking.isActive).isEmpty)
             const _EmptyState(text: 'Belum ada booking aktif.')
@@ -153,8 +170,9 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
   }
 
   Widget _activeBookingsPage() {
-    final activeBookings =
-        _bookings.where((booking) => booking.isActive).toList();
+    final activeBookings = _bookings
+        .where((booking) => booking.isActive)
+        .toList();
 
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -199,34 +217,43 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_user.name,
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text(
+                    _user.name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   _infoRow(Icons.email, _user.email),
                   _infoRow(
-                      Icons.phone, _user.phone.isEmpty ? '-' : _user.phone),
-                  _infoRow(Icons.location_on,
-                      _user.address.isEmpty ? '-' : _user.address),
+                    Icons.phone,
+                    _user.phone.isEmpty ? '-' : _user.phone,
+                  ),
                   _infoRow(
-                      Icons.handyman,
-                      _user.specialization.isEmpty
-                          ? '-'
-                          : _user.specialization),
+                    Icons.location_on,
+                    _user.address.isEmpty ? '-' : _user.address,
+                  ),
+                  _infoRow(
+                    Icons.handyman,
+                    _user.specialization.isEmpty ? '-' : _user.specialization,
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-              onPressed: _showEditProfileDialog,
-              icon: const Icon(Icons.edit),
-              label: const Text('Edit Profil')),
+            onPressed: _showEditProfileDialog,
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit Profil'),
+          ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-              onPressed: _showChangePasswordDialog,
-              icon: const Icon(Icons.lock),
-              label: const Text('Ubah Password')),
+            onPressed: _showChangePasswordDialog,
+            icon: const Icon(Icons.lock),
+            label: const Text('Ubah Password'),
+          ),
         ],
       ),
     );
@@ -241,9 +268,13 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
             children: [
               Icon(icon, color: color),
               const SizedBox(height: 8),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               Text(label),
             ],
           ),
@@ -253,6 +284,12 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
   }
 
   Widget _bookingCard(Booking booking) {
+    final customerAddress = booking.customer?['address']?.toString() ?? '-';
+    final serviceLocation = booking.serviceLocation.isEmpty
+        ? customerAddress
+        : booking.serviceLocation;
+    final invoice = booking.invoice;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -262,18 +299,24 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Booking #${booking.id}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'Booking #${booking.id}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text(bookingStatusLabel(booking.status)),
               ],
             ),
             const SizedBox(height: 8),
             Text(booking.service?.name ?? 'Layanan'),
             Text('Customer: ${booking.customer?['name'] ?? '-'}'),
-            Text('Alamat: ${booking.customer?['address'] ?? '-'}'),
+            Text('Lokasi: $serviceLocation'),
             Text('Jadwal: ${formatDate(booking.scheduledDate)}'),
             Text('Total: ${formatRupiah(booking.totalPrice)}'),
             if (booking.notes.isNotEmpty) Text('Catatan: ${booking.notes}'),
+            if (invoice != null) ...[
+              const SizedBox(height: 10),
+              _invoiceSummary(invoice),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -285,6 +328,11 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
                   ),
                 if (booking.status == 'confirmed')
                   FilledButton.tonal(
+                    onPressed: () => _updateStatus(booking, 'en_route'),
+                    child: const Text('Menuju Lokasi'),
+                  ),
+                if (booking.status == 'en_route')
+                  FilledButton.tonal(
                     onPressed: () => _updateStatus(booking, 'in_progress'),
                     child: const Text('Mulai'),
                   ),
@@ -293,7 +341,8 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
                     onPressed: () => _completeBooking(booking),
                     child: const Text('Selesai'),
                   ),
-                if (booking.isActive)
+                if (booking.status == 'pending' ||
+                    booking.status == 'confirmed')
                   OutlinedButton(
                     onPressed: () => _updateStatus(booking, 'cancelled'),
                     child: const Text('Batalkan'),
@@ -304,6 +353,145 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
         ),
       ),
     );
+  }
+
+  Widget _invoiceSummary(Map<String, dynamic> invoice) {
+    final invoiceNumber = invoice['invoice_number']?.toString() ?? 'Invoice';
+    final status = invoice['status']?.toString() ?? '';
+    final total = double.tryParse(invoice['total'].toString()) ?? 0;
+    final pendingAmount =
+        double.tryParse(invoice['pending_amount'].toString()) ?? 0;
+    final latestPayment = invoice['latest_payment'];
+    final latestPaymentStatus = latestPayment is Map<String, dynamic>
+        ? latestPayment['status']?.toString() ?? ''
+        : '';
+    final latestPaymentId = latestPayment is Map<String, dynamic>
+        ? int.tryParse(latestPayment['id'].toString())
+        : null;
+    final statusLabel = pendingAmount > 0
+        ? 'Menunggu verifikasi'
+        : invoiceStatusLabel(status);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Invoice',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                statusLabel,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(invoiceNumber),
+          Text(formatRupiah(total)),
+          if (pendingAmount > 0)
+            Text('Menunggu verifikasi ${formatRupiah(pendingAmount)}'),
+          if (latestPaymentStatus.isNotEmpty)
+            Text('Pembayaran: ${paymentStatusLabel(latestPaymentStatus)}'),
+          if (latestPaymentId != null &&
+              latestPaymentStatus == 'pending_approval') ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                FilledButton.tonal(
+                  onPressed: () => _approvePayment(latestPaymentId),
+                  child: const Text('Verifikasi'),
+                ),
+                OutlinedButton(
+                  onPressed: () => _rejectPayment(latestPaymentId),
+                  child: const Text('Tolak'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _approvePayment(int paymentId) async {
+    try {
+      await ApiService.approvePayment(paymentId, notes: 'Diverifikasi teknisi');
+      await _loadData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran berhasil diverifikasi.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e.toString());
+    }
+  }
+
+  Future<void> _rejectPayment(int paymentId) async {
+    final reason = TextEditingController();
+    final rejected = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tolak Pembayaran'),
+        content: TextField(
+          controller: reason,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Alasan penolakan'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Tolak'),
+          ),
+        ],
+      ),
+    );
+
+    if (rejected != true) {
+      reason.dispose();
+      return;
+    }
+
+    if (reason.text.trim().isEmpty) {
+      reason.dispose();
+      _showError('Alasan penolakan wajib diisi.');
+      return;
+    }
+
+    try {
+      await ApiService.rejectPayment(paymentId, reason: reason.text);
+      await _loadData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran ditolak.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e.toString());
+    } finally {
+      reason.dispose();
+    }
   }
 
   Future<void> _updateStatus(Booking booking, String status) async {
@@ -323,16 +511,19 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
       builder: (context) => AlertDialog(
         title: const Text('Selesaikan Booking'),
         content: TextField(
-            controller: notes,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Catatan pekerjaan')),
+          controller: notes,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Catatan pekerjaan'),
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Selesai')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Selesai'),
+          ),
         ],
       ),
     );
@@ -360,11 +551,13 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
   Widget _infoRow(IconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Row(children: [
-        Icon(icon, size: 18),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text))
-      ]),
+      child: Row(
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
     );
   }
 
@@ -384,30 +577,37 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                  controller: name,
-                  decoration: const InputDecoration(labelText: 'Nama')),
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Nama'),
+              ),
               TextField(
-                  controller: email,
-                  decoration: const InputDecoration(labelText: 'Email')),
+                controller: email,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
               TextField(
-                  controller: phone,
-                  decoration: const InputDecoration(labelText: 'Telepon')),
+                controller: phone,
+                decoration: const InputDecoration(labelText: 'Telepon'),
+              ),
               TextField(
-                  controller: address,
-                  decoration: const InputDecoration(labelText: 'Alamat')),
+                controller: address,
+                decoration: const InputDecoration(labelText: 'Alamat'),
+              ),
               TextField(
-                  controller: specialization,
-                  decoration: const InputDecoration(labelText: 'Spesialisasi')),
+                controller: specialization,
+                decoration: const InputDecoration(labelText: 'Spesialisasi'),
+              ),
             ],
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Simpan')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Simpan'),
+          ),
         ],
       ),
     );
@@ -425,7 +625,8 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
       if (!mounted) return;
       setState(() => _user = updated);
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil berhasil diperbarui.')));
+        const SnackBar(content: Text('Profil berhasil diperbarui.')),
+      );
     } catch (e) {
       if (!mounted) return;
       _showError(e.toString());
@@ -444,22 +645,26 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-                controller: current,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password lama')),
+              controller: current,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password lama'),
+            ),
             TextField(
-                controller: password,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password baru')),
+              controller: password,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Password baru'),
+            ),
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Simpan')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Simpan'),
+          ),
         ],
       ),
     );
@@ -470,7 +675,8 @@ class _TechnicianDashboardState extends State<TechnicianDashboard> {
       await ApiService.updatePassword(current.text, password.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password berhasil diubah.')));
+        const SnackBar(content: Text('Password berhasil diubah.')),
+      );
     } catch (e) {
       if (!mounted) return;
       _showError(e.toString());
@@ -488,7 +694,8 @@ class _EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Center(
-          child: Text(text, style: TextStyle(color: Colors.grey.shade600))),
+        child: Text(text, style: TextStyle(color: Colors.grey.shade600)),
+      ),
     );
   }
 }

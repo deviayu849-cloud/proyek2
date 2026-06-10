@@ -5,6 +5,7 @@ class Booking {
   final int id;
   final String status;
   final DateTime? scheduledDate;
+  final String serviceLocation;
   final String notes;
   final String completionNotes;
   final String cancellationReason;
@@ -19,6 +20,7 @@ class Booking {
     required this.id,
     required this.status,
     required this.scheduledDate,
+    required this.serviceLocation,
     required this.notes,
     required this.completionNotes,
     required this.cancellationReason,
@@ -35,6 +37,7 @@ class Booking {
       id: json['id'] as int,
       status: json['status']?.toString() ?? 'pending',
       scheduledDate: _parseDate(json['scheduled_date']),
+      serviceLocation: json['service_location']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
       completionNotes: json['completion_notes']?.toString() ?? '',
       cancellationReason: json['cancellation_reason']?.toString() ?? '',
@@ -63,7 +66,10 @@ class Booking {
   }
 
   bool get isActive =>
-      status == 'pending' || status == 'confirmed' || status == 'in_progress';
+      status == 'pending' ||
+      status == 'confirmed' ||
+      status == 'en_route' ||
+      status == 'in_progress';
   bool get isCompleted => status == 'completed';
   bool get hasRating => rating != null;
 }

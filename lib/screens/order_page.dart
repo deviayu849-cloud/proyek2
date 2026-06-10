@@ -16,6 +16,7 @@ class OrderPage extends StatefulWidget {
 
 class _OrderPageState extends State<OrderPage> {
   final _notesController = TextEditingController();
+  final _locationController = TextEditingController();
   bool _isLoading = true;
   bool _isSubmitting = false;
   List<ServiceItem> _services = [];
@@ -34,6 +35,7 @@ class _OrderPageState extends State<OrderPage> {
   @override
   void dispose() {
     _notesController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -78,8 +80,9 @@ class _OrderPageState extends State<OrderPage> {
   Future<void> _submit() async {
     if (_selectedService == null ||
         _selectedDate == null ||
-        _selectedTime == null) {
-      _showError('Pilih layanan, tanggal, dan waktu terlebih dahulu.');
+        _selectedTime == null ||
+        _locationController.text.trim().isEmpty) {
+      _showError('Pilih layanan, tanggal, waktu, dan lokasi terlebih dahulu.');
       return;
     }
 
@@ -102,6 +105,7 @@ class _OrderPageState extends State<OrderPage> {
         serviceId: _selectedService!.id,
         technicianId: _selectedTechnician?.id,
         scheduledDate: scheduledDate,
+        serviceLocation: _locationController.text,
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
@@ -113,6 +117,7 @@ class _OrderPageState extends State<OrderPage> {
         _selectedTechnician = null;
         _selectedDate = null;
         _selectedTime = null;
+        _locationController.clear();
         _notesController.clear();
       });
       widget.onCreated?.call();
@@ -141,7 +146,8 @@ class _OrderPageState extends State<OrderPage> {
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
         children: [
           const Text('Pilih layanan',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -155,7 +161,7 @@ class _OrderPageState extends State<OrderPage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           DropdownButtonFormField<Technician?>(
-            initialValue: _selectedTechnician,
+            value: _selectedTechnician,
             decoration: const InputDecoration(
                 border: OutlineInputBorder(), labelText: 'Teknisi'),
             items: [
@@ -199,6 +205,16 @@ class _OrderPageState extends State<OrderPage> {
           ),
           const SizedBox(height: 20),
           TextField(
+            controller: _locationController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Lokasi layanan',
+              hintText: 'Contoh: Rumah Blok A No. 12, patokan dekat masjid',
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextField(
             controller: _notesController,
             maxLines: 3,
             decoration: const InputDecoration(
@@ -229,12 +245,67 @@ class _OrderPageState extends State<OrderPage> {
         leading: const Icon(Icons.ac_unit),
         title: Text(service.name),
         subtitle: Text(
-            '${service.description}\nDurasi ${service.durationMinutes} menit'),
-        trailing: Text(formatRupiah(service.price),
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+            '${service.description}\nDurasi ${service.durationMinutes} menit\n${formatRupiah(service.price)}'),
+        trailing: IconButton(
+          icon: const Icon(Icons.info_outline),
+          onPressed: () => _showServiceDetail(service),
+        ),
         selected: selected,
         onTap: () => setState(() => _selectedService = service),
       ),
+    );
+  }
+
+  Future<void> _showServiceDetail(ServiceItem service) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        final technicians = _technicians;
+        return AlertDialog(
+          title: Text(service.name),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(service.description.isEmpty ? '-' : service.description),
+                const SizedBox(height: 12),
+                Text('Durasi ${service.durationMinutes} menit'),
+                Text(formatRupiah(service.price),
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                Text('Teknisi tersedia: ${technicians.length}'),
+                const SizedBox(height: 8),
+                if (technicians.isEmpty)
+                  const Text('Belum ada teknisi tersedia.')
+                else
+                  ...technicians.take(5).map(
+                        (technician) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            '${technician.name} - ${technician.specialization}'
+                            '\nRating ${technician.averageRating.toStringAsFixed(1)} (${technician.ratingCount} ulasan)',
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() => _selectedService = service);
+                Navigator.pop(context);
+              },
+              child: const Text('Pilih'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

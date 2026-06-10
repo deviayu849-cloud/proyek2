@@ -12,6 +12,7 @@ class Invoice {
   final double remainingAmount;
   final double pendingAmount;
   final bool hasPendingPayment;
+  final Map<String, dynamic>? latestPayment;
 
   Invoice({
     required this.id,
@@ -27,6 +28,7 @@ class Invoice {
     required this.remainingAmount,
     required this.pendingAmount,
     required this.hasPendingPayment,
+    required this.latestPayment,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,9 @@ class Invoice {
           double.tryParse(json['remaining_amount'].toString()) ?? 0,
       pendingAmount: double.tryParse(json['pending_amount'].toString()) ?? 0,
       hasPendingPayment: json['has_pending_payment'] == true,
+      latestPayment: json['latest_payment'] is Map<String, dynamic>
+          ? json['latest_payment'] as Map<String, dynamic>
+          : null,
     );
   }
 

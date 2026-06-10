@@ -15,6 +15,7 @@ String bookingStatusLabel(String status) {
   return switch (status) {
     'pending' => 'Menunggu',
     'confirmed' => 'Dikonfirmasi',
+    'en_route' => 'Menuju lokasi',
     'in_progress' => 'Sedang dikerjakan',
     'completed' => 'Selesai',
     'cancelled' => 'Dibatalkan',

@@ -6,6 +6,8 @@ class Payment {
   final String referenceNumber;
   final String status;
   final String notes;
+  final String paymentProof;
+  final String paymentProofUrl;
   final DateTime? submittedDate;
   final DateTime? approvedDate;
 
@@ -17,6 +19,8 @@ class Payment {
     required this.referenceNumber,
     required this.status,
     required this.notes,
+    required this.paymentProof,
+    required this.paymentProofUrl,
     required this.submittedDate,
     required this.approvedDate,
   });
@@ -30,6 +34,8 @@ class Payment {
       referenceNumber: json['reference_number']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
+      paymentProof: json['payment_proof']?.toString() ?? '',
+      paymentProofUrl: json['payment_proof_url']?.toString() ?? '',
       submittedDate: _parseDate(json['submitted_date']),
       approvedDate: _parseDate(json['approved_date']),
     );

@@ -1,7 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/booking.dart';
 import '../models/invoice.dart';
+import '../models/payment.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../utils/formatters.dart';
@@ -23,6 +25,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   List<Booking> _bookings = [];
   List<Invoice> _invoices = [];
   bool _isLoading = true;
+  String _historyFilter = 'all';
 
   @override
   void initState() {
@@ -139,6 +142,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   }
 
   Widget _historyPage() {
+    final filteredBookings = _filteredHistoryBookings();
+
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView(
@@ -147,10 +152,27 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           const Text('Booking',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          if (_bookings.isEmpty)
+          DropdownButtonFormField<String>(
+            value: _historyFilter,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Filter riwayat',
+            ),
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('Semua')),
+              DropdownMenuItem(value: 'active', child: Text('Aktif')),
+              DropdownMenuItem(value: 'completed', child: Text('Selesai')),
+              DropdownMenuItem(value: 'cancelled', child: Text('Dibatalkan')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _historyFilter = value);
+            },
+          ),
+          const SizedBox(height: 12),
+          if (filteredBookings.isEmpty)
             const _EmptyState(text: 'Riwayat booking kosong.')
           else
-            ..._bookings.map(_bookingCard),
+            ...filteredBookings.map(_bookingCard),
           const SizedBox(height: 24),
           const Text('Invoice',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -162,6 +184,16 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ],
       ),
     );
+  }
+
+  List<Booking> _filteredHistoryBookings() {
+    return switch (_historyFilter) {
+      'active' => _bookings.where((booking) => booking.isActive).toList(),
+      'completed' => _bookings.where((booking) => booking.isCompleted).toList(),
+      'cancelled' =>
+        _bookings.where((booking) => booking.status == 'cancelled').toList(),
+      _ => _bookings,
+    };
   }
 
   Widget _profilePage() {
@@ -257,7 +289,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             title: Text(booking.service?.name ?? 'Layanan'),
             subtitle: Text(
               '${formatDate(booking.scheduledDate)}\n'
-              '${booking.technician?.name ?? 'Teknisi belum ditentukan'}',
+              '${booking.technician?.name ?? 'Teknisi belum ditentukan'}\n'
+              '${booking.serviceLocation.isEmpty ? '-' : booking.serviceLocation}',
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -299,6 +332,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final serviceName = service is Map
         ? service['name']?.toString() ?? 'Booking #${invoice.bookingId}'
         : 'Booking #${invoice.bookingId}';
+    final statusLabel = invoice.hasPendingPayment
+        ? 'Menunggu verifikasi'
+        : invoiceStatusLabel(invoice.status);
 
     return Card(
       child: Column(
@@ -312,7 +348,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(invoiceStatusLabel(invoice.status),
+                Text(statusLabel,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(formatRupiah(invoice.total)),
               ],
@@ -328,6 +364,11 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 if (invoice.hasPendingPayment)
                   Text('Menunggu verifikasi',
                       style: TextStyle(color: Colors.grey.shade700)),
+                OutlinedButton.icon(
+                  onPressed: () => _showPaymentHistoryDialog(invoice),
+                  icon: const Icon(Icons.history),
+                  label: const Text('Riwayat'),
+                ),
                 if (!invoice.isPaid && !invoice.hasPendingPayment) ...[
                   Text('Sisa ${formatRupiah(invoice.remainingAmount)}',
                       style: TextStyle(color: Colors.grey.shade700)),
@@ -353,59 +394,135 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final reference = TextEditingController();
     final notes = TextEditingController();
     var method = 'bank_transfer';
+    PlatformFile? proofFile;
+    String? dialogError;
+    const maxProofSize = 5 * 1024 * 1024;
 
     final submitted = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Bayar Invoice'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: amount,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Nominal'),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: method,
-                  decoration:
-                      const InputDecoration(labelText: 'Metode pembayaran'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'bank_transfer', child: Text('Transfer Bank')),
-                    DropdownMenuItem(value: 'cash', child: Text('Tunai')),
-                    DropdownMenuItem(value: 'check', child: Text('Cek')),
+        builder: (context, setDialogState) {
+          void submit() {
+            final parsedAmount =
+                double.tryParse(amount.text.trim().replaceAll(',', '.')) ?? 0;
+            final needsProof = method == 'bank_transfer' || method == 'check';
+
+            if (parsedAmount <= 0) {
+              setDialogState(
+                  () => dialogError = 'Nominal pembayaran tidak valid.');
+              return;
+            }
+
+            if (invoice.remainingAmount > 0 &&
+                parsedAmount > invoice.remainingAmount) {
+              setDialogState(
+                  () => dialogError = 'Nominal melebihi sisa tagihan.');
+              return;
+            }
+
+            if (needsProof && reference.text.trim().isEmpty) {
+              setDialogState(
+                  () => dialogError = 'Nomor referensi wajib diisi.');
+              return;
+            }
+
+            if (needsProof &&
+                (proofFile?.path == null || proofFile!.path!.isEmpty)) {
+              setDialogState(
+                  () => dialogError = 'Bukti pembayaran wajib diunggah.');
+              return;
+            }
+
+            Navigator.pop(context, true);
+          }
+
+          return AlertDialog(
+            title: const Text('Bayar Invoice'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (dialogError != null) ...[
+                    Text(dialogError!,
+                        style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 8),
                   ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() => method = value);
-                    }
-                  },
-                ),
-                TextField(
-                  controller: reference,
-                  decoration:
-                      const InputDecoration(labelText: 'Nomor referensi'),
-                ),
-                TextField(
-                  controller: notes,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Catatan'),
-                ),
-              ],
+                  TextField(
+                    controller: amount,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Nominal'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: method,
+                    decoration:
+                        const InputDecoration(labelText: 'Metode pembayaran'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'bank_transfer', child: Text('Transfer Bank')),
+                      DropdownMenuItem(value: 'cash', child: Text('Tunai')),
+                      DropdownMenuItem(value: 'check', child: Text('Cek')),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() {
+                          method = value;
+                          dialogError = null;
+                        });
+                      }
+                    },
+                  ),
+                  TextField(
+                    controller: notes,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: 'Catatan'),
+                  ),
+                  if (method == 'bank_transfer' || method == 'check') ...[
+                    TextField(
+                      controller: reference,
+                      decoration:
+                          const InputDecoration(labelText: 'Nomor referensi'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+                          withData: false,
+                        );
+                        if (result == null || result.files.isEmpty) return;
+
+                        final pickedFile = result.files.single;
+                        if (pickedFile.size > maxProofSize) {
+                          setDialogState(
+                              () => dialogError = 'Ukuran bukti maksimal 5MB.');
+                          return;
+                        }
+
+                        setDialogState(() {
+                          proofFile = pickedFile;
+                          dialogError = null;
+                        });
+                      },
+                      icon: const Icon(Icons.attach_file),
+                      label: Text(proofFile == null
+                          ? 'Pilih bukti bayar'
+                          : proofFile!.name),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('JPG, PNG, atau PDF. Maksimal 5MB.'),
+                  ],
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Batal')),
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Kirim')),
-          ],
-        ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Batal')),
+              FilledButton(onPressed: submit, child: const Text('Kirim')),
+            ],
+          );
+        },
       ),
     );
 
@@ -425,6 +542,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         amount: parsedAmount,
         paymentMethod: method,
         referenceNumber: reference.text,
+        paymentProofPath: method == 'bank_transfer' || method == 'check'
+            ? proofFile?.path
+            : null,
         notes: notes.text,
       );
       await _loadData();
@@ -442,6 +562,49 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     }
   }
 
+  Future<void> _showPaymentHistoryDialog(Invoice invoice) async {
+    try {
+      final payments = await ApiService.getInvoicePayments(invoice.id);
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Riwayat Pembayaran'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: payments.isEmpty
+                ? const Text('Belum ada pembayaran.')
+                : ListView(
+                    shrinkWrap: true,
+                    children: payments.map(_paymentHistoryTile).toList(),
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e.toString());
+    }
+  }
+
+  Widget _paymentHistoryTile(Payment payment) {
+    return ListTile(
+      leading: const Icon(Icons.payments),
+      title: Text(formatRupiah(payment.amount)),
+      subtitle: Text(
+        '${paymentMethodLabel(payment.paymentMethod)} - ${paymentStatusLabel(payment.status)}\n'
+        'Ref: ${payment.referenceNumber.isEmpty ? '-' : payment.referenceNumber}',
+      ),
+    );
+  }
+
   Future<void> _showRatingDialog(Booking booking) async {
     final review = TextEditingController(
         text: booking.rating?['review']?.toString() ?? '');
@@ -456,7 +619,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                initialValue: rating,
+                value: rating,
                 decoration: const InputDecoration(labelText: 'Rating'),
                 items: const [
                   DropdownMenuItem(value: 5, child: Text('5 - Sangat baik')),
@@ -492,6 +655,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
     if (submitted != true) {
       review.dispose();
+      return;
+    }
+
+    if (review.text.trim().isEmpty) {
+      review.dispose();
+      _showError('Review wajib diisi.');
       return;
     }
 
