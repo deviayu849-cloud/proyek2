@@ -9,35 +9,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout source code
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
+      # Setup Java 17
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      # Setup Flutter
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.1'
 
-      - name: Check Version
+      # Cek versi Flutter & Dart
+      - name: 🔍 Check Version
         run: |
           flutter --version
           dart --version
 
+      # Flutter Doctor
+      - name: 🩺 Flutter Doctor
+        run: flutter doctor -v
+
+      # Bersihkan cache Flutter & Gradle
+      - name: 🧹 Clean Project
+        run: |
+          flutter clean
+          rm -rf ~/.gradle/caches
+
+      # Install dependency
       - name: 📦 Install Dependencies
         run: flutter pub get
 
+      # Test (opsional)
       - name: 🧪 Run Tests
         run: flutter test
         continue-on-error: true
 
+      # Build APK
       - name: 🏗️ Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
+      # Upload APK
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
